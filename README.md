@@ -1,3 +1,7 @@
+<p align="center"><img src="./src/icon.svg" width="100" height="100" alt="Amazon S3 for Craft CMS icon"></p>
+
+<h1 align="center">CloudFront Purge</h1>
+
 # CloudFront Purge plugin for Craft CMS 3.x
 
 Invalidate the CloudFront cache on entry save
@@ -12,20 +16,20 @@ This plugin requires Craft CMS 3.0.0-beta.23 or later.
 
 To install the plugin, follow these instructions.
 
-1. Open your terminal and go to your Craft project:
+1.  Open your terminal and go to your Craft project:
 
         cd /path/to/project
 
-2. Then tell Composer to load the plugin:
+2.  Then tell Composer to load the plugin:
 
         composer require kayqq/cloud-front-purge
 
-3. In the Control Panel, go to Settings → Plugins and click the “Install” button for CloudFront Purge.
+3.  In the Control Panel, go to Settings → Plugins and click the “Install” button for CloudFront Purge.
 
 ## CloudFront Purge Overview
 
 A lightweight plugin that creates an invalidation for CloudFront edge caches on entry save.
-The invalidation is specific to the entry being saved and preserves all other cached objects. 
+The invalidation is specific to the entry being saved and preserves all other cached objects.
 
 ## Configuring CloudFront Purge
 
@@ -36,7 +40,6 @@ The invalidation is specific to the entry being saved and preserves all other ca
 
 Note: IAM role permissions must be configured to allow for invalidation creation for CloudFront.
 
-
 ## Using CloudFront Purge
 
 Save an entry and watch the magic happen.
@@ -45,6 +48,6 @@ Save an entry and watch the magic happen.
 
 Some things to do, and ideas for potential features:
 
-* Release it
+- Release it
 
 Brought to you by [Kenny Quan](https://www.kennyquan.com)
