@@ -15,8 +15,6 @@
 
 {% import "_includes/forms" as forms %}
 
-{% do view.registerAssetBundle("kayqq\\cloudfrontpurge\\assetbundles\\cloudfrontpurge\\CloudfrontPurgeAsset") %}
-
 {{ forms.autosuggestField({
     label: "Access Key ID"|t('aws-s3'),
     id: 'keyId',
