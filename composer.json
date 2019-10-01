@@ -1,6 +1,6 @@
 {
   "name": "kayqq/craft-cloudfront-purge",
-  "description": "Invalidate the CloudFront cache on entry save",
+  "description": "A Craft CMS 3.x plugin that enables automatic Cloudfront Cache invalidation on entry save",
   "type": "craft-plugin",
   "version": "1.0.0",
   "keywords": [
