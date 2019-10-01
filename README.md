@@ -2,11 +2,9 @@
 
 <h1 align="center">CloudFront Purge</h1>
 
-# CloudFront Purge plugin for Craft CMS 3.x
+A plugin for Craft CMS 3.x to enable CloudFront cache invalidation on entry save.
 
-Invalidate the CloudFront cache on entry save
-
-![Screenshot](resources/img/plugin-logo.png)
+#
 
 ## Requirements
 
