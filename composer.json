@@ -1,0 +1,41 @@
+{
+  "name": "kayqq/craft-cloudfront-purge",
+  "description": "Invalidate the CloudFront cache on entry save",
+  "type": "craft-plugin",
+  "version": "1.0.0",
+  "keywords": [
+    "craft",
+    "cms",
+    "craftcms",
+    "craft-plugin",
+    "cloudfront purge"
+  ],
+  "support": {
+    "docs": "https://github.com/kayqq/craft-cloudfront-purge/blob/master/README.md",
+    "issues": "https://github.com/kayqq/craft-cloudfront-purge/issues"
+  },
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Kenny Quan",
+      "homepage": "https://www.kennyquan.com"
+    }
+  ],
+  "require": {
+    "craftcms/cms": "^3.0.0-RC1",
+    "aws/aws-sdk-php": "^3.0.0"
+  },
+  "autoload": {
+    "psr-4": {
+      "kayqq\\cloudfrontpurge\\": "src/"
+    }
+  },
+  "extra": {
+    "name": "CloudFront Purge",
+    "handle": "cloud-front-purge",
+    "hasCpSettings": true,
+    "hasCpSection": false,
+    "changelogUrl": "https://raw.githubusercontent.com/kayqq/cloud-front-purge/master/CHANGELOG.md",
+    "class": "kayqq\\cloudfrontpurge\\CloudfrontPurge"
+  }
+}

@@ -1,0 +1,57 @@
+{# @var craft \craft\web\twig\variables\CraftVariable #}
+{#
+/**
+ * CloudFront Purge plugin for Craft CMS 3.x
+ *
+ * CloudFront Purge Settings.twig
+ *
+ * @author    Kenny Quan
+ * @copyright Copyright (c) 2019 Kenny Quan
+ * @link      https://www.kennyquan.com
+ * @package   CloudfrontPurge
+ * @since     1.0.0
+ */
+#}
+
+{% import "_includes/forms" as forms %}
+
+{% do view.registerAssetBundle("kayqq\\cloudfrontpurge\\assetbundles\\cloudfrontpurge\\CloudfrontPurgeAsset") %}
+
+{{ forms.autosuggestField({
+    label: "Access Key ID"|t('aws-s3'),
+    id: 'keyId',
+    name: 'keyId',
+    suggestEnvVars: true,
+    value: settings.keyId,
+    class: 's3-key-id',
+    instructions: 'You can leave this field empty if you are using an EC2 instance with an applicable IAM role assignment.'|t('aws-s3')
+}) }}
+
+{{ forms.autosuggestField({
+    label: "Secret Access Key"|t('aws-s3'),
+    id: 'secret',
+    name: 'secret',
+    suggestEnvVars: true,
+    value: settings.secret,
+    class: 's3-secret-key',
+    instructions: 'You can leave this field empty if you are using an EC2 instance with an applicable IAM role assignment.'|t('aws-s3')
+}) }}
+
+{{ forms.autosuggestField({
+    label: "Region"|t('aws-s3'),
+    id: 'region',
+    class: 'ltr',
+    name: 'region',
+    suggestEnvVars: true,
+    value: settings.region,
+    placeholder: 'Region'|t('aws-s3')
+}) }}
+
+{{ forms.autosuggestField({
+    label: "CloudFront Distribution ID"|t('aws-s3'),
+    id: 'cfDistributionId',
+    class: 'ltr',
+    name: 'cfDistributionId',
+    suggestEnvVars: true,
+    value: settings.cfDistributionId,
+}) }}
