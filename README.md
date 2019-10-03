@@ -31,21 +31,25 @@ The invalidation is specific to the entry being saved and preserves all other ca
 
 ## Configuring CloudFront Purge
 
-1. Add an access key id
-2. Add a secret key
-3. Add a distribution id
-4. Fill out the region in which the distribution is
+1. Add an IAM access key
+2. Add a IAM secret key
+3. Add a CloudFront distribution ID
+4. Add the region in which the distribution is, example: `us-west-1`.
 
 Note: IAM role permissions must be configured to allow for invalidation creation for CloudFront.
 
 ## Using CloudFront Purge
 
-Save an entry and watch the magic happen.
+**Note that Amazon CloudFront charges for invalidation requests. Since invalidation requests can quickly add up when purging individual URLs, you should be aware of the potential costs. Kayqq takes no responsibility whatsoever for expenses incurred.**
+
+> No additional charge for the first 1,000 paths requested for invalidation each month. Thereafter, \$0.005 per path requested for invalidation.
+
+> A path listed in your invalidation request represents the URL (or multiple URLs if the path contains a wildcard character) of the object(s) you want to invalidate from CloudFront cache.
+
+Source: [aws.amazon.com/cloudfront/pricing](https://aws.amazon.com/cloudfront/pricing/)
 
 ## CloudFront Purge Roadmap
 
-Some things to do, and ideas for potential features:
-
 - Release it
 
-Brought to you by [Kenny Quan](https://www.kennyquan.com)
+Brought to you by [Kayqq](https://www.github.com/kayqq)

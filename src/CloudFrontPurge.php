@@ -40,13 +40,13 @@ use yii\base\Event;
  * https://craftcms.com/docs/plugins/introduction
  *
  * @author    Kenny Quan
- * @package   CloudfrontPurge
+ * @package   CloudFrontPurge
  * @since     1.0.0
  *
  * @property  Settings $settings
  * @method    Settings getSettings()
  */
-class CloudfrontPurge extends Plugin
+class CloudFrontPurge extends Plugin
 {
   // Static Properties
   // =========================================================================
@@ -59,9 +59,9 @@ class CloudfrontPurge extends Plugin
 
   /**
    * Static property that is an instance of this plugin class so that it can be accessed via
-   * CloudfrontPurge::$plugin
+   * CloudFrontPurge::$plugin
    *
-   * @var CloudfrontPurge
+   * @var CloudFrontPurge
    */
   public static $plugin;
 
@@ -81,7 +81,7 @@ class CloudfrontPurge extends Plugin
 
   /**
    * Set our $plugin static property to this class so that it can be accessed via
-   * CloudfrontPurge::$plugin
+   * CloudFrontPurge::$plugin
    *
    * Called after the plugin class is instantiated; do any one-time initialization
    * here such as hooks and events.
