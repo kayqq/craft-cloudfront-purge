@@ -73,7 +73,7 @@ class CloudFrontPurge extends Plugin
    *
    * @var string
    */
-  public $schemaVersion = '1.0.0';
+  public $schemaVersion = '1.0.1';
   public $invalidationSent = false;
 
   // Public Methods
