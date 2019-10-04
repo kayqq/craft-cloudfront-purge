@@ -36,6 +36,6 @@
     "hasCpSettings": true,
     "hasCpSection": false,
     "changelogUrl": "https://raw.githubusercontent.com/kayqq/cloud-front-purge/master/CHANGELOG.md",
-    "class": "kayqq\\cloudfrontpurge\\CloudfrontPurge"
+    "class": "kayqq\\cloudfrontpurge\\CloudFrontPurge"
   }
 }
