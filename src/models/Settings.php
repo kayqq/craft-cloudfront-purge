@@ -11,13 +11,10 @@
 
 namespace kayqq\cloudfrontpurge\models;
 
-use kayqq\cloudfrontpurge\CloudfrontPurge;
-
-use Craft;
 use craft\base\Model;
 
 /**
- * CloudfrontPurge Settings Model
+ * CloudFrontPurge Settings Model
  *
  * This is a model used to define the plugin's settings.
  *
@@ -27,7 +24,7 @@ use craft\base\Model;
  * https://craftcms.com/docs/plugins/models
  *
  * @author    Kenny Quan
- * @package   CloudfrontPurge
+ * @package   CloudFrontPurge
  * @since     1.0.0
  */
 class Settings extends Model
