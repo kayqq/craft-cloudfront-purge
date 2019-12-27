@@ -52,6 +52,16 @@ class Settings extends Model
      */
     public $cfDistributionId = '';
 
+    /**
+     * @var string CloudFront Distribution Prefix
+     */
+    public $cfPrefix = '';
+
+    /**
+     * @var string CloudFront Distribution Prefix
+     */
+    public $cfSuffix = '';
+
     // Public Methods
     // =========================================================================
 

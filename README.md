@@ -36,6 +36,11 @@ The invalidation is specific to the entry being saved and preserves all other ca
 3. Add a CloudFront distribution ID
 4. Add the region in which the distribution is, example: `us-west-1`.
 
+**Optional**
+
+5. Add a path prefix, applicable if you’re using CloudFront as CDN for your assets and have configured subfolders or custom behaviors.
+6. Add a path suffix, applicable if you want to add trailing slash, wild card operator, or other custom behaviors.
+
 Note: IAM role permissions must be configured to allow for invalidation creation for CloudFront.
 
 ## Using CloudFront Purge
@@ -43,7 +48,6 @@ Note: IAM role permissions must be configured to allow for invalidation creation
 **Note that Amazon CloudFront charges for invalidation requests. Since invalidation requests can quickly add up when purging individual URLs, you should be aware of the potential costs. Kayqq takes no responsibility whatsoever for expenses incurred.**
 
 > No additional charge for the first 1,000 paths requested for invalidation each month. Thereafter, \$0.005 per path requested for invalidation.
-
 > A path listed in your invalidation request represents the URL (or multiple URLs if the path contains a wildcard character) of the object(s) you want to invalidate from CloudFront cache.
 
 Source: [aws.amazon.com/cloudfront/pricing](https://aws.amazon.com/cloudfront/pricing/)

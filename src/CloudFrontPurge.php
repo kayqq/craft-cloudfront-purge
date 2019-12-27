@@ -23,8 +23,8 @@ use Craft;
 use craft\base\Plugin;
 use craft\events\ElementEvent;
 use craft\services\Elements;
-use craft\elements\Entry;
 use craft\helpers\StringHelper;
+use craft\helpers\ElementHelper;
 use craft\behaviors\EnvAttributeParserBehavior;
 
 use yii\base\Event;
@@ -74,7 +74,6 @@ class CloudFrontPurge extends Plugin
    * @var string
    */
   public $schemaVersion = '1.0.2';
-  public $invalidationSent = false;
 
   // Public Methods
   // =========================================================================
@@ -99,9 +98,15 @@ class CloudFrontPurge extends Plugin
       Elements::class,
       Elements::EVENT_AFTER_SAVE_ELEMENT,
       function (ElementEvent $event) {
-        if ($event->element instanceof Entry) {
-          $entry = $event->element;
-          $this->invalidateCdnPath($entry->uri);
+        $element = $event->element;
+        if (
+          $element instanceof \craft\elements\Entry // is entry
+          && $element->uri // has a uri
+          && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
+          && !$element->propagating // not during propagating (avoid batch propagating)
+          && !$element->resaving // not during resaving (avoid batch resaving)
+        ) {
+          $this->invalidateCdnPath($element->uri);
         }
       }
     );
@@ -206,8 +211,8 @@ class CloudFrontPurge extends Plugin
   protected function invalidateCdnPath(string $path): bool
   {
     $settings = $this->getSettings();
-    if (!empty($settings->cfDistributionId) && !$this->invalidationSent) {
-      // If CloudFront distribution ID set and invalidation has not been sent, invalidate the path.
+    if (!empty($settings->cfDistributionId)) {
+      // If there's a CloudFront distribution ID set, invalidate the path.
       $cfClient = $this->_getCloudFrontClient();
 
       try {
@@ -218,14 +223,12 @@ class CloudFrontPurge extends Plugin
               'Paths' =>
               [
                 'Quantity' => 1,
-                'Items' => ['/' . ltrim($path, '/')]
+                'Items' => ['/' . $this->_cfPrefix() . ltrim($path, '/') . $this->_cfSuffix()]
               ],
               'CallerReference' => 'Craft-' . StringHelper::randomString(24)
             ]
           ]
         );
-        // Flag invalidation as sent to prevent duplicate invalidations from 'on save' event firing per site.
-        $this->invalidationSent = true;
       } catch (CloudFrontException $exception) {
         // Log the warning, most likely due to 404. Allow the operation to continue, though.
         Craft::warning($exception->getMessage());
@@ -263,6 +266,34 @@ class CloudFrontPurge extends Plugin
 
   // Private Methods
   // =========================================================================
+
+  /**
+   * Returns the parsed CloudFront distribution prefix
+   *
+   * @return string|null
+   */
+  private function _cfPrefix(): string
+  {
+    $settings = $this->getSettings();
+    if ($settings->cfPrefix && ($cfPrefix = rtrim(Craft::parseEnv($settings->cfPrefix), '/')) !== '') {
+      return $cfPrefix . '/';
+    }
+    return '';
+  }
+
+  /**
+   * Returns the parsed CloudFront distribution suffix
+   *
+   * @return string|null
+   */
+  private function _cfSuffix(): string
+  {
+    $settings = $this->getSettings();
+    if ($settings->cfSuffix && ($cfSuffix = trim(Craft::parseEnv($settings->cfSuffix))) !== '') {
+      return $cfSuffix;
+    }
+    return '';
+  }
 
   /**
    * Get a CloudFront client.
