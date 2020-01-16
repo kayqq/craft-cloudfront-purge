@@ -22,10 +22,12 @@ use Aws\Sts\StsClient;
 use Craft;
 use craft\base\Plugin;
 use craft\events\ElementEvent;
+use craft\events\RegisterCacheOptionsEvent;
 use craft\services\Elements;
 use craft\helpers\StringHelper;
 use craft\helpers\ElementHelper;
 use craft\behaviors\EnvAttributeParserBehavior;
+use craft\utilities\ClearCaches;
 
 use yii\base\Event;
 
@@ -73,7 +75,7 @@ class CloudFrontPurge extends Plugin
    *
    * @var string
    */
-  public $schemaVersion = '1.0.4';
+  public $schemaVersion = '1.0.5';
 
   // Public Methods
   // =========================================================================
@@ -99,15 +101,46 @@ class CloudFrontPurge extends Plugin
       Elements::EVENT_AFTER_SAVE_ELEMENT,
       function (ElementEvent $event) {
         $element = $event->element;
-        if (
-          $element instanceof \craft\elements\Entry // is entry
-          && $element->uri // has a uri
-          && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
-          && !$element->propagating // not during propagating (avoid batch propagating)
-          && !$element->resaving // not during resaving (avoid batch resaving)
-        ) {
-          $this->invalidateCdnPath($element->uri);
+
+        switch (true) {
+          case $element instanceof \craft\elements\Entry:
+            if (
+              $element->uri // has a uri
+              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
+              && !$element->propagating // not during propagating (avoid batch propagating)
+              && !$element->resaving // not during resaving (avoid batch resaving)
+            ) {
+              $this->invalidateCdnPath('/' . $this->_cfPrefix() . ltrim($element->uri, '/') . $this->_cfSuffix());
+            }
+            break;
+          case $element instanceof \craft\elements\Category:
+          case $element instanceof \craft\elements\GlobalSet:
+            if (
+              !ElementHelper::isDraftOrRevision($element)
+              && !$element->propagating // not during propagating (avoid batch propagating)
+              && !$element->resaving // not during resaving (avoid batch resaving)
+            ) {
+              $this->invalidateCdnPath('/*');
+            }
+            break;
         }
+      }
+    );
+
+    // Handler: ClearCaches::EVENT_REGISTER_CACHE_OPTIONS
+    Event::on(
+      ClearCaches::class,
+      ClearCaches::EVENT_REGISTER_CACHE_OPTIONS,
+      function (RegisterCacheOptionsEvent $event) {
+        Craft::debug(
+          'ClearCaches::EVENT_REGISTER_CACHE_OPTIONS',
+          __METHOD__
+        );
+        // Register our Cache Options
+        $event->options = array_merge(
+          $event->options,
+          $this->customAdminCpCacheOptions()
+        );
       }
     );
 
@@ -155,6 +188,15 @@ class CloudFrontPurge extends Plugin
       ],
     ];
     return $behaviors;
+  }
+
+  /**
+   * Clear all the caches!
+   */
+  public function purgeAll()
+  {
+    // Clear all of CloudFront's caches
+    $this->invalidateCdnPath('/*');
   }
 
   /**
@@ -223,7 +265,7 @@ class CloudFrontPurge extends Plugin
               'Paths' =>
               [
                 'Quantity' => 1,
-                'Items' => ['/' . $this->_cfPrefix() . ltrim($path, '/') . $this->_cfSuffix()]
+                'Items' => [$path]
               ],
               'CallerReference' => 'Craft-' . StringHelper::randomString(24)
             ]
@@ -236,6 +278,22 @@ class CloudFrontPurge extends Plugin
     }
 
     return true;
+  }
+
+  /**
+   * Returns the custom Control Panel cache options.
+   *
+   * @return array
+   */
+  protected function customAdminCpCacheOptions(): array
+  {
+    return [
+      [
+        'key' => 'cloudfront-edge-caches',
+        'label' => 'CloudFront Edge Caches',
+        'action' => [self::$plugin, 'purgeAll'],
+      ],
+    ];
   }
 
   /**

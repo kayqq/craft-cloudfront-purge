@@ -52,6 +52,12 @@ Note: IAM role permissions must be configured to allow for invalidation creation
 
 Source: [aws.amazon.com/cloudfront/pricing](https://aws.amazon.com/cloudfront/pricing/)
 
+Entries on save will invalidate themselves if their uri exists (e.g., `/blog/xyz`).
+
+Globals & Categories on save will invalidate the entire site (e.g., `/*` invalidation path).
+
+There is also a cache option to purge CloudFront under Craft's Clear Cache Utility.
+
 ## CloudFront Purge Roadmap
 
 - Release it
