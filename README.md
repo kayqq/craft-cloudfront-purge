@@ -20,7 +20,7 @@ To install the plugin, follow these instructions.
 
 2.  Then tell Composer to load the plugin:
 
-        composer require kayqq/cloud-front-purge
+        composer require kayqq/craft-cloudfront-purge
 
 3.  In the Control Panel, go to Settings → Plugins and click the “Install” button for CloudFront Purge.
 
