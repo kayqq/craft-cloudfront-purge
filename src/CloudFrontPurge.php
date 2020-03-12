@@ -117,6 +117,18 @@ class CloudFrontPurge extends Plugin
             }
             break;
           case $element instanceof \craft\elements\Category:
+            if (
+              $element->uri // has a uri
+              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
+              && !$element->propagating // not during propagating (avoid batch propagating)
+              && !$element->resaving // not during resaving (avoid batch resaving)
+            ) {
+              $uri = $element->uri;
+              $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+              Craft::info("Invalidating Category path:" . $path);
+              $this->invalidateCdnPath($path);
+            }
+            break;
           case $element instanceof \craft\elements\GlobalSet:
             if (
               !ElementHelper::isDraftOrRevision($element)
