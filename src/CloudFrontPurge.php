@@ -101,7 +101,6 @@ class CloudFrontPurge extends Plugin
       Elements::EVENT_AFTER_SAVE_ELEMENT,
       function (ElementEvent $event) {
         $element = $event->element;
-
         switch (true) {
           case $element instanceof \craft\elements\Entry:
             if (
@@ -110,7 +109,11 @@ class CloudFrontPurge extends Plugin
               && !$element->propagating // not during propagating (avoid batch propagating)
               && !$element->resaving // not during resaving (avoid batch resaving)
             ) {
-              $this->invalidateCdnPath('/' . $this->_cfPrefix() . ltrim($element->uri, '/') . $this->_cfSuffix());
+              $uri = $element->uri;
+              if ($uri === "__home__") $uri = "";
+              $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+              Craft::info("Invalidating Entry path:" . $path);
+              $this->invalidateCdnPath($path);
             }
             break;
           case $element instanceof \craft\elements\Category:
@@ -120,6 +123,7 @@ class CloudFrontPurge extends Plugin
               && !$element->propagating // not during propagating (avoid batch propagating)
               && !$element->resaving // not during resaving (avoid batch resaving)
             ) {
+              Craft::info("Invalidating all paths.");
               $this->invalidateCdnPath('/*');
             }
             break;
