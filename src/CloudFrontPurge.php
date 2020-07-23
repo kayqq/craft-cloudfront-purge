@@ -50,359 +50,334 @@ use yii\base\Event;
  */
 class CloudFrontPurge extends Plugin
 {
-  // Static Properties
-  // =========================================================================
+    // Static Properties
+    // =========================================================================
 
-  const CACHE_KEY_PREFIX = 'aws.';
-  const CACHE_DURATION_SECONDS = 3600;
+    const CACHE_KEY_PREFIX = 'aws.';
+    const CACHE_DURATION_SECONDS = 3600;
 
-  // Static Properties
-  // =========================================================================
-
-  /**
-   * Static property that is an instance of this plugin class so that it can be accessed via
-   * CloudFrontPurge::$plugin
-   *
-   * @var CloudFrontPurge
-   */
-  public static $plugin;
-
-  // Public Properties
-  // =========================================================================
-
-  /**
-   * To execute your plugin’s migrations, you’ll need to increase its schema version.
-   *
-   * @var string
-   */
-  public $schemaVersion = '1.0.6';
-
-  // Public Methods
-  // =========================================================================
-
-  /**
-   * Set our $plugin static property to this class so that it can be accessed via
-   * CloudFrontPurge::$plugin
-   *
-   * Called after the plugin class is instantiated; do any one-time initialization
-   * here such as hooks and events.
-   *
-   * If you have a '/vendor/autoload.php' file, it will be loaded for you automatically;
-   * you do not need to load it in your init() method.
-   *
-   */
-  public function init()
-  {
-    parent::init();
-    self::$plugin = $this;
-
-    Event::on(
-      Elements::class,
-      Elements::EVENT_AFTER_SAVE_ELEMENT,
-      function (ElementEvent $event) {
-        $element = $event->element;
-        switch (true) {
-          case $element instanceof \craft\elements\Entry:
-            if (
-              $element->uri // has a uri
-              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
-            ) {
-              $uri = $element->uri;
-              if ($uri === "__home__") $uri = "";
-              $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
-              Craft::info("Invalidating Entry path:" . $path);
-              $this->invalidateCdnPath($path);
-            }
-            break;
-          case $element instanceof \craft\elements\Category:
-            if (
-              $element->uri // has a uri
-              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
-            ) {
-              $uri = $element->uri;
-              $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
-              Craft::info("Invalidating Category path:" . $path);
-              $this->invalidateCdnPath($path);
-            }
-            break;
-          case $element instanceof \craft\elements\GlobalSet:
-            if (
-              !ElementHelper::isDraftOrRevision($element)
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
-            ) {
-              Craft::info("Invalidating all paths.");
-              $this->invalidateCdnPath('/*');
-            }
-            break;
-        }
-      }
-    );
-
-    // Handler: ClearCaches::EVENT_REGISTER_CACHE_OPTIONS
-    Event::on(
-      ClearCaches::class,
-      ClearCaches::EVENT_REGISTER_CACHE_OPTIONS,
-      function (RegisterCacheOptionsEvent $event) {
-        Craft::debug(
-          'ClearCaches::EVENT_REGISTER_CACHE_OPTIONS',
-          __METHOD__
-        );
-        // Register our Cache Options
-        $event->options = array_merge(
-          $event->options,
-          $this->customAdminCpCacheOptions()
-        );
-      }
-    );
+    // Static Properties
+    // =========================================================================
 
     /**
-     * Logging in Craft involves using one of the following methods:
+     * Static property that is an instance of this plugin class so that it can be accessed via
+     * CloudFrontPurge::$plugin
      *
-     * Craft::trace(): record a message to trace how a piece of code runs. This is mainly for development use.
-     * Craft::info(): record a message that conveys some useful information.
-     * Craft::warning(): record a warning message that indicates something unexpected has happened.
-     * Craft::error(): record a fatal error that should be investigated as soon as possible.
-     *
-     * Unless `devMode` is on, only Craft::warning() & Craft::error() will log to `craft/storage/logs/web.log`
-     *
-     * It's recommended that you pass in the magic constant `__METHOD__` as the second parameter, which sets
-     * the category to the method (prefixed with the fully qualified class name) where the constant appears.
-     *
-     * To enable the Yii debug toolbar, go to your user account in the AdminCP and check the
-     * [] Show the debug toolbar on the front end & [] Show the debug toolbar on the Control Panel
-     *
-     * http://www.yiiframework.com/doc-2.0/guide-runtime-logging.html
+     * @var CloudFrontPurge
      */
-    Craft::info(
-      Craft::t(
-        'cloud-front-purge',
-        '{name} plugin loaded',
-        ['name' => $this->name]
-      ),
-      __METHOD__
-    );
-  }
+    public static $plugin;
 
-  /**
-   * @inheritdoc
-   */
-  public function behaviors()
-  {
-    $behaviors = parent::behaviors();
-    $behaviors['parser'] = [
-      'class' => EnvAttributeParserBehavior::class,
-      'attributes' => [
-        'keyId',
-        'secret',
-        'region',
-        'cfDistributionId',
-      ],
-    ];
-    return $behaviors;
-  }
+    // Public Properties
+    // =========================================================================
 
-  /**
-   * Clear all the caches!
-   */
-  public function purgeAll()
-  {
-    // Clear all of CloudFront's caches
-    $this->invalidateCdnPath('/*');
-  }
+    /**
+     * To execute your plugin’s migrations, you’ll need to increase its schema version.
+     *
+     * @var string
+     */
+    public $schemaVersion = '1.0.6';
 
-  /**
-   * Build the config array based on a keyID and secret
-   *
-   * @param string|null $keyId The key ID
-   * @param string|null $secret The key secret
-   * @param string|null $region The region to user
-   * @param bool $refreshToken If true will always refresh token
-   * @return array
-   */
-  public static function buildConfigArray($keyId = null, $secret = null, $region = null, $refreshToken = false): array
-  {
-    $config = [
-      'region' => $region,
-      'version' => 'latest'
-    ];
+    // Public Methods
+    // =========================================================================
 
-    $client = Craft::createGuzzleClient();
-    $config['http_handler'] = new GuzzleHandler($client);
+    /**
+     * Set our $plugin static property to this class so that it can be accessed via
+     * CloudFrontPurge::$plugin
+     *
+     * Called after the plugin class is instantiated; do any one-time initialization
+     * here such as hooks and events.
+     *
+     * If you have a '/vendor/autoload.php' file, it will be loaded for you automatically;
+     * you do not need to load it in your init() method.
+     *
+     */
+    public function init()
+    {
+        parent::init();
+        self::$plugin = $this;
 
-    if (empty($keyId) || empty($secret)) {
-      // Assume we're running on EC2 and we have an IAM role assigned. Kick back and relax.
-    } else {
-      $tokenKey = static::CACHE_KEY_PREFIX . md5($keyId . $secret);
-      $credentials = new Credentials($keyId, $secret);
+        Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, function (ElementEvent $event) {
+            $element = $event->element;
+            switch (true) {
+                case $element instanceof \craft\elements\Entry:
+                    if (
+                        $element->uri && // has a uri
+                        !ElementHelper::isDraftOrRevision($element) && // is not draft or revision
+                        !$element->propagating && // not during propagating (avoid batch propagating)
+                        !$element->resaving // not during resaving (avoid batch resaving)
+                    ) {
+                        $uri = $element->uri;
+                        if ($uri === '__home__') {
+                            $uri = '';
+                        }
+                        $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+                        Craft::info('Invalidating Entry path:' . $path);
+                        $this->invalidateCdnPath($path);
+                    }
+                    break;
+                case $element instanceof \craft\elements\Category:
+                    if (
+                        $element->uri && // has a uri
+                        !ElementHelper::isDraftOrRevision($element) && // is not draft or revision
+                        !$element->propagating && // not during propagating (avoid batch propagating)
+                        !$element->resaving // not during resaving (avoid batch resaving)
+                    ) {
+                        $uri = $element->uri;
+                        $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+                        Craft::info('Invalidating Category path:' . $path);
+                        $this->invalidateCdnPath($path);
+                    }
+                    break;
+                case $element instanceof \craft\elements\GlobalSet:
+                    if (
+                        !ElementHelper::isDraftOrRevision($element) &&
+                        !$element->propagating && // not during propagating (avoid batch propagating)
+                        !$element->resaving // not during resaving (avoid batch resaving)
+                    ) {
+                        $uri = 'global/' . $element->handle;
+                        $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+                        Craft::info('Invalidating Global path:' . $path);
+                        $this->invalidateCdnPath($path);
+                    }
+                    break;
+            }
+        });
 
-      if (Craft::$app->cache->exists($tokenKey) && !$refreshToken) {
-        $cached = Craft::$app->cache->get($tokenKey);
-        $credentials->unserialize($cached);
-      } else {
-        $config['credentials'] = $credentials;
-        $stsClient = new StsClient($config);
-        $result = $stsClient->getSessionToken(['DurationSeconds' => static::CACHE_DURATION_SECONDS]);
-        $credentials = $stsClient->createCredentials($result);
-        $cacheDuration = $credentials->getExpiration() - time();
-        $cacheDuration = $cacheDuration > 0 ?: static::CACHE_DURATION_SECONDS;
-        Craft::$app->cache->set($tokenKey, $credentials->serialize(), $cacheDuration);
-      }
+        // Handler: ClearCaches::EVENT_REGISTER_CACHE_OPTIONS
+        Event::on(ClearCaches::class, ClearCaches::EVENT_REGISTER_CACHE_OPTIONS, function (
+            RegisterCacheOptionsEvent $event
+        ) {
+            Craft::debug('ClearCaches::EVENT_REGISTER_CACHE_OPTIONS', __METHOD__);
+            // Register our Cache Options
+            $event->options = array_merge($event->options, $this->customAdminCpCacheOptions());
+        });
 
-      // TODO Add support for different credential supply methods
-      $config['credentials'] = $credentials;
+        /**
+         * Logging in Craft involves using one of the following methods:
+         *
+         * Craft::trace(): record a message to trace how a piece of code runs. This is mainly for development use.
+         * Craft::info(): record a message that conveys some useful information.
+         * Craft::warning(): record a warning message that indicates something unexpected has happened.
+         * Craft::error(): record a fatal error that should be investigated as soon as possible.
+         *
+         * Unless `devMode` is on, only Craft::warning() & Craft::error() will log to `craft/storage/logs/web.log`
+         *
+         * It's recommended that you pass in the magic constant `__METHOD__` as the second parameter, which sets
+         * the category to the method (prefixed with the fully qualified class name) where the constant appears.
+         *
+         * To enable the Yii debug toolbar, go to your user account in the AdminCP and check the
+         * [] Show the debug toolbar on the front end & [] Show the debug toolbar on the Control Panel
+         *
+         * http://www.yiiframework.com/doc-2.0/guide-runtime-logging.html
+         */
+        Craft::info(Craft::t('cloud-front-purge', '{name} plugin loaded', ['name' => $this->name]), __METHOD__);
     }
 
-    return $config;
-  }
-
-  // Protected Methods
-  // =========================================================================
-
-  /**
-   * @inheritdoc
-   */
-  protected function invalidateCdnPath(string $path): bool
-  {
-    $settings = $this->getSettings();
-    if (!empty($settings->cfDistributionId)) {
-      // If there's a CloudFront distribution ID set, invalidate the path.
-      $cfClient = $this->_getCloudFrontClient();
-
-      try {
-        $cfClient->createInvalidation(
-          [
-            'DistributionId' => Craft::parseEnv($settings->cfDistributionId),
-            'InvalidationBatch' => [
-              'Paths' =>
-              [
-                'Quantity' => 1,
-                'Items' => [$path]
-              ],
-              'CallerReference' => 'Craft-' . StringHelper::randomString(24)
-            ]
-          ]
-        );
-      } catch (CloudFrontException $exception) {
-        // Log the warning, most likely due to 404. Allow the operation to continue, though.
-        Craft::warning($exception->getMessage());
-      }
+    /**
+     * @inheritdoc
+     */
+    public function behaviors()
+    {
+        $behaviors = parent::behaviors();
+        $behaviors['parser'] = [
+            'class' => EnvAttributeParserBehavior::class,
+            'attributes' => ['keyId', 'secret', 'region', 'cfDistributionId'],
+        ];
+        return $behaviors;
     }
 
-    return true;
-  }
-
-  /**
-   * Returns the custom Control Panel cache options.
-   *
-   * @return array
-   */
-  protected function customAdminCpCacheOptions(): array
-  {
-    return [
-      [
-        'key' => 'cloudfront-edge-caches',
-        'label' => 'CloudFront Edge Caches',
-        'action' => [self::$plugin, 'purgeAll'],
-      ],
-    ];
-  }
-
-  /**
-   * Creates and returns the model used to store the plugin’s settings.
-   *
-   * @return \craft\base\Model|null
-   */
-  protected function createSettingsModel()
-  {
-    return new Settings();
-  }
-
-  /**
-   * Returns the rendered settings HTML, which will be inserted into the content
-   * block on the settings page.
-   *
-   * @return string The rendered settings HTML
-   */
-  protected function settingsHtml(): string
-  {
-    return Craft::$app->view->renderTemplate(
-      'cloud-front-purge/settings',
-      [
-        'settings' => $this->getSettings()
-      ]
-    );
-  }
-
-  // Private Methods
-  // =========================================================================
-
-  /**
-   * Returns the parsed CloudFront distribution prefix
-   *
-   * @return string|null
-   */
-  private function _cfPrefix(): string
-  {
-    $settings = $this->getSettings();
-    if ($settings->cfPrefix && ($cfPrefix = rtrim(Craft::parseEnv($settings->cfPrefix), '/')) !== '') {
-      return $cfPrefix . '/';
+    /**
+     * Clear all the caches!
+     */
+    public function purgeAll()
+    {
+        // Clear all of CloudFront's caches
+        $this->invalidateCdnPath('/*');
     }
-    return '';
-  }
 
-  /**
-   * Returns the parsed CloudFront distribution suffix
-   *
-   * @return string|null
-   */
-  private function _cfSuffix(): string
-  {
-    $settings = $this->getSettings();
-    if ($settings->cfSuffix && ($cfSuffix = trim(Craft::parseEnv($settings->cfSuffix))) !== '') {
-      return $cfSuffix;
+    /**
+     * Build the config array based on a keyID and secret
+     *
+     * @param string|null $keyId The key ID
+     * @param string|null $secret The key secret
+     * @param string|null $region The region to user
+     * @param bool $refreshToken If true will always refresh token
+     * @return array
+     */
+    public static function buildConfigArray($keyId = null, $secret = null, $region = null, $refreshToken = false): array
+    {
+        $config = [
+            'region' => $region,
+            'version' => 'latest',
+        ];
+
+        $client = Craft::createGuzzleClient();
+        $config['http_handler'] = new GuzzleHandler($client);
+
+        if (empty($keyId) || empty($secret)) {
+            // Assume we're running on EC2 and we have an IAM role assigned. Kick back and relax.
+        } else {
+            $tokenKey = static::CACHE_KEY_PREFIX . md5($keyId . $secret);
+            $credentials = new Credentials($keyId, $secret);
+
+            if (Craft::$app->cache->exists($tokenKey) && !$refreshToken) {
+                $cached = Craft::$app->cache->get($tokenKey);
+                $credentials->unserialize($cached);
+            } else {
+                $config['credentials'] = $credentials;
+                $stsClient = new StsClient($config);
+                $result = $stsClient->getSessionToken(['DurationSeconds' => static::CACHE_DURATION_SECONDS]);
+                $credentials = $stsClient->createCredentials($result);
+                $cacheDuration = $credentials->getExpiration() - time();
+                $cacheDuration = $cacheDuration > 0 ?: static::CACHE_DURATION_SECONDS;
+                Craft::$app->cache->set($tokenKey, $credentials->serialize(), $cacheDuration);
+            }
+
+            // TODO Add support for different credential supply methods
+            $config['credentials'] = $credentials;
+        }
+
+        return $config;
     }
-    return '';
-  }
 
-  /**
-   * Get a CloudFront client.
-   *
-   * @return CloudFrontClient
-   */
-  private function _getCloudFrontClient()
-  {
-    return new CloudFrontClient($this->_getConfigArray());
-  }
+    // Protected Methods
+    // =========================================================================
 
-  /**
-   * Get the config array for AWS Clients.
-   *
-   * @return array
-   */
-  private function _getConfigArray()
-  {
-    $credentials = $this->_getCredentials();
+    /**
+     * @inheritdoc
+     */
+    protected function invalidateCdnPath(string $path): bool
+    {
+        $settings = $this->getSettings();
 
-    return self::buildConfigArray($credentials['keyId'], $credentials['secret'], $credentials['region']);
-  }
+        if (!empty($settings->cfDistributionId)) {
+            // If there's a CloudFront distribution ID set, invalidate the path.
+            $cfClient = $this->_getCloudFrontClient();
 
-  /**
-   * Return the credentials as an array
-   *
-   * @return array
-   */
-  private function _getCredentials()
-  {
-    $settings = $this->getSettings();
-    return [
-      'keyId' => Craft::parseEnv($settings->keyId),
-      'secret' => Craft::parseEnv($settings->secret),
-      'region' => Craft::parseEnv($settings->region),
-    ];
-  }
+            try {
+                $cfClient->createInvalidation([
+                    'DistributionId' => Craft::parseEnv($settings->cfDistributionId),
+                    'InvalidationBatch' => [
+                        'Paths' => [
+                            'Quantity' => 1,
+                            'Items' => [$path],
+                        ],
+                        'CallerReference' => 'Craft-' . StringHelper::randomString(24),
+                    ],
+                ]);
+            } catch (CloudFrontException $exception) {
+                // Log the warning, most likely due to 404. Allow the operation to continue, though.
+                Craft::warning($exception->getMessage());
+            }
+        }
+
+        return true;
+    }
+
+    /**
+     * Returns the custom Control Panel cache options.
+     *
+     * @return array
+     */
+    protected function customAdminCpCacheOptions(): array
+    {
+        return [
+            [
+                'key' => 'cloudfront-edge-caches',
+                'label' => 'CloudFront Edge Caches',
+                'action' => [self::$plugin, 'purgeAll'],
+            ],
+        ];
+    }
+
+    /**
+     * Creates and returns the model used to store the plugin’s settings.
+     *
+     * @return \craft\base\Model|null
+     */
+    protected function createSettingsModel()
+    {
+        return new Settings();
+    }
+
+    /**
+     * Returns the rendered settings HTML, which will be inserted into the content
+     * block on the settings page.
+     *
+     * @return string The rendered settings HTML
+     */
+    protected function settingsHtml(): string
+    {
+        return Craft::$app->view->renderTemplate('cloud-front-purge/settings', [
+            'settings' => $this->getSettings(),
+        ]);
+    }
+
+    // Private Methods
+    // =========================================================================
+
+    /**
+     * Returns the parsed CloudFront distribution prefix
+     *
+     * @return string|null
+     */
+    private function _cfPrefix(): string
+    {
+        $settings = $this->getSettings();
+        if ($settings->cfPrefix && ($cfPrefix = rtrim(Craft::parseEnv($settings->cfPrefix), '/')) !== '') {
+            return $cfPrefix . '/';
+        }
+        return '';
+    }
+
+    /**
+     * Returns the parsed CloudFront distribution suffix
+     *
+     * @return string|null
+     */
+    private function _cfSuffix(): string
+    {
+        $settings = $this->getSettings();
+        if ($settings->cfSuffix && ($cfSuffix = trim(Craft::parseEnv($settings->cfSuffix))) !== '') {
+            return $cfSuffix;
+        }
+        return '';
+    }
+
+    /**
+     * Get a CloudFront client.
+     *
+     * @return CloudFrontClient
+     */
+    private function _getCloudFrontClient()
+    {
+        return new CloudFrontClient($this->_getConfigArray());
+    }
+
+    /**
+     * Get the config array for AWS Clients.
+     *
+     * @return array
+     */
+    private function _getConfigArray()
+    {
+        $credentials = $this->_getCredentials();
+
+        return self::buildConfigArray($credentials['keyId'], $credentials['secret'], $credentials['region']);
+    }
+
+    /**
+     * Return the credentials as an array
+     *
+     * @return array
+     */
+    private function _getCredentials()
+    {
+        $settings = $this->getSettings();
+        return [
+            'keyId' => Craft::parseEnv($settings->keyId),
+            'secret' => Craft::parseEnv($settings->secret),
+            'region' => Craft::parseEnv($settings->region),
+        ];
+    }
 }
