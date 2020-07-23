@@ -60,6 +60,6 @@ There is also a cache option to purge CloudFront under Craft's Clear Cache Utili
 
 ## CloudFront Purge Roadmap
 
-- Release it
+-   Release it
 
 Brought to you by [Kayqq](https://www.github.com/kayqq)
