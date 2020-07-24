@@ -75,3 +75,15 @@
     value: settings.cfSuffix,
     errors: settings.getErrors('cfSuffix')
 }) }}
+
+
+{{ forms.autosuggestField({
+    label: "CloudFront Global Path Before Handle"|t('aws-s3'),
+    instructions: "Enter the path that comes after the prefix but before the handle on Globals (e.g., global/)."|t('aws-s3'),
+    id: 'cfGlobalPathBeforeHandle',
+    class: 'ltr',
+    name: 'cfGlobalPathBeforeHandle',
+    suggestEnvVars: true,
+    value: settings.cfGlobalPathBeforeHandle,
+    errors: settings.getErrors('cfGlobalPathBeforeHandle')
+}) }}

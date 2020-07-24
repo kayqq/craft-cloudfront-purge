@@ -29,54 +29,59 @@ use craft\base\Model;
  */
 class Settings extends Model
 {
-    // Public Properties
-    // =========================================================================
+  // Public Properties
+  // =========================================================================
 
-    /**
-     * @var string AWS key ID
-     */
-    public $keyId = '';
+  /**
+   * @var string AWS key ID
+   */
+  public $keyId = '';
 
-    /**
-     * @var string AWS key secret
-     */
-    public $secret = '';
+  /**
+   * @var string AWS key secret
+   */
+  public $secret = '';
 
-    /**
-     * @var string Region to use
-     */
-    public $region = '';
+  /**
+   * @var string Region to use
+   */
+  public $region = '';
 
-    /**
-     * @var string CloudFront Distribution ID
-     */
-    public $cfDistributionId = '';
+  /**
+   * @var string CloudFront Distribution ID
+   */
+  public $cfDistributionId = '';
 
-    /**
-     * @var string CloudFront Distribution Prefix
-     */
-    public $cfPrefix = '';
+  /**
+   * @var string CloudFront Distribution Prefix
+   */
+  public $cfPrefix = '';
 
-    /**
-     * @var string CloudFront Distribution Prefix
-     */
-    public $cfSuffix = '';
+  /**
+   * @var string CloudFront Distribution Prefix
+   */
+  public $cfSuffix = '';
 
-    // Public Methods
-    // =========================================================================
+  /**
+   * @var string CloudFront Global Path
+   */
+  public $cfGlobalPathBeforeHandle = '';
 
-    /**
-     * Returns the validation rules for attributes.
-     *
-     * Validation rules are used by [[validate()]] to check if attribute values are valid.
-     * Child classes may override this method to declare different validation rules.
-     *
-     * More info: http://www.yiiframework.com/doc-2.0/guide-input-validation.html
-     *
-     * @return array
-     */
-    public function rules()
-    {
-        return [];
-    }
+  // Public Methods
+  // =========================================================================
+
+  /**
+   * Returns the validation rules for attributes.
+   *
+   * Validation rules are used by [[validate()]] to check if attribute values are valid.
+   * Child classes may override this method to declare different validation rules.
+   *
+   * More info: http://www.yiiframework.com/doc-2.0/guide-input-validation.html
+   *
+   * @return array
+   */
+  public function rules()
+  {
+    return [];
+  }
 }

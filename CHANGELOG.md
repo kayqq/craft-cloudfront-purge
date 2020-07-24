@@ -8,16 +8,16 @@ The format is based on [Keep a Changelog](http://keepachangelog.com/) and this p
 
 ### Added
 
--   Initial release
+- Initial release
 
 ## 1.0.1 - 2019-10-03
 
 ### Added
 
--   Initial release
+- Initial release
 
 ## 1.0.0 - 2019-09-30
 
 ### Added
 
--   Initial release
+- Initial release
