@@ -96,7 +96,7 @@ class CloudFrontPurge extends Plugin
     parent::init();
     self::$plugin = $this;
 
-    // Add list of related entries:
+    // Add checkbox to bypass cache flush:
     Craft::$app->getView()->hook('cp.entries.edit.details', function (array &$context) {
       // And a radio toggle for disabling the cache flush:
       $html = '
