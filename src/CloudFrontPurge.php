@@ -100,26 +100,26 @@ class CloudFrontPurge extends Plugin
     Craft::$app->getView()->hook('cp.entries.edit.details', function (array &$context) {
       // And a radio toggle for disabling the cache flush:
       $html = '
-                <div class="field checkboxfield">
-                    <input type="checkbox" id="cache_flush_checkbox" class="checkbox" value="">
-                    <label for="cache_flush_checkbox">Disable cache flush</label>
-                </div>
-                <script>
-                    document.addEventListener(
-                        "DOMContentLoaded",
-                        function() {
-                            document.cookie = "disable_cache_flush=false;";
-                            document.querySelector("#cache_flush_checkbox").addEventListener(
-                                "change",
-                                function(event) {
-                                    console.log(event.target.checked);
-                                    document.cookie = "disable_cache_flush=" + event.target.checked + ";";
-                                }
-                            );
-                        }
-                    );
-                </script>
-            ';
+        <div class="field checkboxfield">
+          <input type="checkbox" id="cache_flush_checkbox" class="checkbox" value="">
+          <label for="cache_flush_checkbox">Disable cache flush</label>
+        </div>
+        <script>
+          document.addEventListener(
+            "DOMContentLoaded",
+            function() {
+              document.cookie = "disable_cache_flush=false;";
+              document.querySelector("#cache_flush_checkbox").addEventListener(
+                "change",
+                function(event) {
+                  document.cookie = "disable_cache_flush=" + event.target.checked + ";";
+                }
+              );
+            }
+          );
+        </script>
+      ';
+
       return $html;
     });
 
