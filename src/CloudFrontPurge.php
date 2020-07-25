@@ -124,7 +124,8 @@ class CloudFrontPurge extends Plugin
     });
 
     Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, function (ElementEvent $event) {
-      if (!in_array('disable_cache_flush', $_COOKIE) || $_COOKIE['disable_cache_flush'] === 'false') {
+      // If the array key does not exist, OR disable_cache_flush is false, continue.
+      if (!array_key_exists('disable_cache_flush', $_COOKIE) || $_COOKIE['disable_cache_flush'] === 'false') {
         $element = $event->element;
         switch (true) {
           case $element instanceof \craft\elements\Entry:
