@@ -96,69 +96,91 @@ class CloudFrontPurge extends Plugin
     parent::init();
     self::$plugin = $this;
 
-    Event::on(
-      Elements::class,
-      Elements::EVENT_AFTER_SAVE_ELEMENT,
-      function (ElementEvent $event) {
+    // Add checkbox to bypass cache flush:
+    Craft::$app->getView()->hook('cp.entries.edit.details', function (array &$context) {
+      // And a radio toggle for disabling the cache flush:
+      $html = '
+        <div class="field checkboxfield">
+          <input type="checkbox" id="cache_flush_checkbox" class="checkbox" value="">
+          <label for="cache_flush_checkbox">Disable cache flush</label>
+        </div>
+        <script>
+          document.addEventListener(
+            "DOMContentLoaded",
+            function() {
+              document.cookie = "disable_cache_flush=false;";
+              document.querySelector("#cache_flush_checkbox").addEventListener(
+                "change",
+                function(event) {
+                  document.cookie = "disable_cache_flush=" + event.target.checked + ";";
+                }
+              );
+            }
+          );
+        </script>
+      ';
+
+      return $html;
+    });
+
+    Event::on(Elements::class, Elements::EVENT_AFTER_SAVE_ELEMENT, function (ElementEvent $event) {
+      // If the array key does not exist, OR disable_cache_flush is false, continue.
+      if (!array_key_exists('disable_cache_flush', $_COOKIE) || $_COOKIE['disable_cache_flush'] === 'false') {
         $element = $event->element;
         switch (true) {
           case $element instanceof \craft\elements\Entry:
             if (
-              $element->uri // has a uri
-              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
+              $element->uri && // has a uri
+              !ElementHelper::isDraftOrRevision($element) && // is not draft or revision
+              !$element->propagating && // not during propagating (avoid batch propagating)
+              !$element->resaving // not during resaving (avoid batch resaving)
             ) {
               $uri = $element->uri;
-              if ($uri === "__home__") $uri = "";
+              if ($uri === '__home__') {
+                $uri = '';
+              }
               $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
-              Craft::info("Invalidating Entry path:" . $path);
+              Craft::info('Invalidating Entry path:' . $path);
               $this->invalidateCdnPath($path);
             }
             break;
           case $element instanceof \craft\elements\Category:
             if (
-              $element->uri // has a uri
-              && !ElementHelper::isDraftOrRevision($element) // is not draft or revision
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
+              $element->uri && // has a uri
+              !ElementHelper::isDraftOrRevision($element) && // is not draft or revision
+              !$element->propagating && // not during propagating (avoid batch propagating)
+              !$element->resaving // not during resaving (avoid batch resaving)
             ) {
               $uri = $element->uri;
               $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
-              Craft::info("Invalidating Category path:" . $path);
+              Craft::info('Invalidating Category path:' . $path);
               $this->invalidateCdnPath($path);
             }
             break;
           case $element instanceof \craft\elements\GlobalSet:
             if (
-              !ElementHelper::isDraftOrRevision($element)
-              && !$element->propagating // not during propagating (avoid batch propagating)
-              && !$element->resaving // not during resaving (avoid batch resaving)
+              !ElementHelper::isDraftOrRevision($element) &&
+              !$element->propagating && // not during propagating (avoid batch propagating)
+              !$element->resaving // not during resaving (avoid batch resaving)
             ) {
-              Craft::info("Invalidating all paths.");
-              $this->invalidateCdnPath('/*');
+              $uri = $this->_cfGlobalPathBeforeHandle() . $element->handle;
+              $path = '/' . $this->_cfPrefix() . ltrim($uri, '/') . $this->_cfSuffix();
+              Craft::info('Invalidating Global path:' . $path);
+              $this->invalidateCdnPath($path);
             }
             break;
         }
       }
-    );
+    });
 
     // Handler: ClearCaches::EVENT_REGISTER_CACHE_OPTIONS
-    Event::on(
-      ClearCaches::class,
-      ClearCaches::EVENT_REGISTER_CACHE_OPTIONS,
-      function (RegisterCacheOptionsEvent $event) {
-        Craft::debug(
-          'ClearCaches::EVENT_REGISTER_CACHE_OPTIONS',
-          __METHOD__
-        );
-        // Register our Cache Options
-        $event->options = array_merge(
-          $event->options,
-          $this->customAdminCpCacheOptions()
-        );
-      }
-    );
+    Event::on(ClearCaches::class, ClearCaches::EVENT_REGISTER_CACHE_OPTIONS, function (
+      RegisterCacheOptionsEvent $event
+    ) {
+      Craft::debug('ClearCaches::EVENT_REGISTER_CACHE_OPTIONS', __METHOD__);
+      // Register our Cache Options
+      $event->options = array_merge($event->options, $this->customAdminCpCacheOptions());
+    });
 
     /**
      * Logging in Craft involves using one of the following methods:
@@ -178,14 +200,7 @@ class CloudFrontPurge extends Plugin
      *
      * http://www.yiiframework.com/doc-2.0/guide-runtime-logging.html
      */
-    Craft::info(
-      Craft::t(
-        'cloud-front-purge',
-        '{name} plugin loaded',
-        ['name' => $this->name]
-      ),
-      __METHOD__
-    );
+    Craft::info(Craft::t('cloud-front-purge', '{name} plugin loaded', ['name' => $this->name]), __METHOD__);
   }
 
   /**
@@ -196,12 +211,7 @@ class CloudFrontPurge extends Plugin
     $behaviors = parent::behaviors();
     $behaviors['parser'] = [
       'class' => EnvAttributeParserBehavior::class,
-      'attributes' => [
-        'keyId',
-        'secret',
-        'region',
-        'cfDistributionId',
-      ],
+      'attributes' => ['keyId', 'secret', 'region', 'cfDistributionId'],
     ];
     return $behaviors;
   }
@@ -228,7 +238,7 @@ class CloudFrontPurge extends Plugin
   {
     $config = [
       'region' => $region,
-      'version' => 'latest'
+      'version' => 'latest',
     ];
 
     $client = Craft::createGuzzleClient();
@@ -269,24 +279,22 @@ class CloudFrontPurge extends Plugin
   protected function invalidateCdnPath(string $path): bool
   {
     $settings = $this->getSettings();
+
     if (!empty($settings->cfDistributionId)) {
       // If there's a CloudFront distribution ID set, invalidate the path.
       $cfClient = $this->_getCloudFrontClient();
 
       try {
-        $cfClient->createInvalidation(
-          [
-            'DistributionId' => Craft::parseEnv($settings->cfDistributionId),
-            'InvalidationBatch' => [
-              'Paths' =>
-              [
-                'Quantity' => 1,
-                'Items' => [$path]
-              ],
-              'CallerReference' => 'Craft-' . StringHelper::randomString(24)
-            ]
-          ]
-        );
+        $cfClient->createInvalidation([
+          'DistributionId' => Craft::parseEnv($settings->cfDistributionId),
+          'InvalidationBatch' => [
+            'Paths' => [
+              'Quantity' => 1,
+              'Items' => [$path],
+            ],
+            'CallerReference' => 'Craft-' . StringHelper::randomString(24),
+          ],
+        ]);
       } catch (CloudFrontException $exception) {
         // Log the warning, most likely due to 404. Allow the operation to continue, though.
         Craft::warning($exception->getMessage());
@@ -330,12 +338,9 @@ class CloudFrontPurge extends Plugin
    */
   protected function settingsHtml(): string
   {
-    return Craft::$app->view->renderTemplate(
-      'cloud-front-purge/settings',
-      [
-        'settings' => $this->getSettings()
-      ]
-    );
+    return Craft::$app->view->renderTemplate('cloud-front-purge/settings', [
+      'settings' => $this->getSettings(),
+    ]);
   }
 
   // Private Methods
@@ -365,6 +370,23 @@ class CloudFrontPurge extends Plugin
     $settings = $this->getSettings();
     if ($settings->cfSuffix && ($cfSuffix = trim(Craft::parseEnv($settings->cfSuffix))) !== '') {
       return $cfSuffix;
+    }
+    return '';
+  }
+
+  /**
+   * Returns the parsed Global path before handle
+   *
+   * @return string|null
+   */
+  private function _cfGlobalPathBeforeHandle(): string
+  {
+    $settings = $this->getSettings();
+    if (
+      $settings->cfGlobalPathBeforeHandle &&
+      ($cfGlobalPathBeforeHandle = trim(Craft::parseEnv($settings->cfGlobalPathBeforeHandle))) !== ''
+    ) {
+      return $cfGlobalPathBeforeHandle;
     }
     return '';
   }
