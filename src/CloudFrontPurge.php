@@ -11,6 +11,7 @@
 
 namespace kayqq\cloudfrontpurge;
 
+use craft\helpers\App;
 use kayqq\cloudfrontpurge\models\Settings;
 
 use Aws\CloudFront\CloudFrontClient;
@@ -75,7 +76,7 @@ class CloudFrontPurge extends Plugin
    *
    * @var string
    */
-  public $schemaVersion = '1.0.6';
+  public string $schemaVersion = '2.0.0';
 
   // Public Methods
   // =========================================================================
@@ -91,7 +92,7 @@ class CloudFrontPurge extends Plugin
    * you do not need to load it in your init() method.
    *
    */
-  public function init()
+  public function init(): void
   {
     parent::init();
     self::$plugin = $this;
@@ -276,7 +277,7 @@ class CloudFrontPurge extends Plugin
       try {
         $cfClient->createInvalidation(
           [
-            'DistributionId' => Craft::parseEnv($settings->cfDistributionId),
+            'DistributionId' => App::parseEnv($settings->cfDistributionId),
             'InvalidationBatch' => [
               'Paths' =>
               [
@@ -317,7 +318,7 @@ class CloudFrontPurge extends Plugin
    *
    * @return \craft\base\Model|null
    */
-  protected function createSettingsModel()
+  protected function createSettingsModel(): Settings
   {
     return new Settings();
   }
@@ -349,7 +350,7 @@ class CloudFrontPurge extends Plugin
   private function _cfPrefix(): string
   {
     $settings = $this->getSettings();
-    if ($settings->cfPrefix && ($cfPrefix = rtrim(Craft::parseEnv($settings->cfPrefix), '/')) !== '') {
+    if ($settings->cfPrefix && ($cfPrefix = rtrim(App::parseEnv($settings->cfPrefix), '/')) !== '') {
       return $cfPrefix . '/';
     }
     return '';
@@ -363,7 +364,7 @@ class CloudFrontPurge extends Plugin
   private function _cfSuffix(): string
   {
     $settings = $this->getSettings();
-    if ($settings->cfSuffix && ($cfSuffix = trim(Craft::parseEnv($settings->cfSuffix))) !== '') {
+    if ($settings->cfSuffix && ($cfSuffix = trim(App::parseEnv($settings->cfSuffix))) !== '') {
       return $cfSuffix;
     }
     return '';
@@ -400,9 +401,9 @@ class CloudFrontPurge extends Plugin
   {
     $settings = $this->getSettings();
     return [
-      'keyId' => Craft::parseEnv($settings->keyId),
-      'secret' => Craft::parseEnv($settings->secret),
-      'region' => Craft::parseEnv($settings->region),
+      'keyId' => App::parseEnv($settings->keyId),
+      'secret' => App::parseEnv($settings->secret),
+      'region' => App::parseEnv($settings->region),
     ];
   }
 }
