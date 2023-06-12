@@ -1,8 +1,8 @@
 {
   "name": "kayqq/craft-cloudfront-purge",
-  "description": "A Craft CMS 3.x plugin that enables automatic Cloudfront Cache invalidation on entry save",
+  "description": "A Craft CMS 4.x plugin that enables automatic Cloudfront Cache invalidation on entry save",
   "type": "craft-plugin",
-  "version": "1.0.6",
+  "version": "2.0.0",
   "keywords": [
     "craft",
     "cms",
@@ -22,7 +22,7 @@
     }
   ],
   "require": {
-    "craftcms/cms": "^3.0.0-RC1",
+    "craftcms/cms": "^4.0.0",
     "aws/aws-sdk-php": "^3.0.0"
   },
   "autoload": {
